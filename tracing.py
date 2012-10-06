@@ -24,11 +24,13 @@ from __future__ import print_function
 from collections import Iterable, OrderedDict
 import functools
 import inspect
+import time
 
 def _repr(name, value):
 	return repr(value)
 
-def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
+def trace(out=None, oncall=True, onexception=True, onreturn=True, timing=False,
+  xfrm=_repr):
 	"""\
 	A decorator that traces enter and exit/exception from a function.  It can
 	also be used to hook those same events.
@@ -90,6 +92,8 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 		@functools.wraps(func)
 		def trace__(*args, **kwargs):
 			entr_done = False
+			timing_str = ''
+			timing_fmt = ' (%d usecs)'
 
 			def callargs_str():
 				try:
@@ -102,23 +106,32 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 				output('entr %s(%s)' % (func.__name__, callargs_str()))
 				entr_done = True
 			try:
+				if timing:
+					start_time = time.time() * 1e6
 				retval = func(*args, **kwargs)
+				if timing:
+					end_time = time.time() * 1e6
+					timing_str = timing_fmt % (end_time - start_time)
 			except Exception as e:
+				if timing:
+					end_time = time.time() * 1e6
+					timing_str = timing_fmt % (end_time - start_time)
 				if match(onexception, e):
 					if entr_done:
-						output('excp %s raised %s %s' % (func.__name__,
-						  e.__class__.__name__, str(e)))
+						output('excp %s raised %s %s%s' % (func.__name__,
+						  e.__class__.__name__, str(e), timing_str))
 					else:
-						output('cexp %s(%s) raised %s %s' % (func.__name__,
-						  callargs_str(), e.__class__.__name__, str(e)))
+						output('cexp %s(%s) raised %s %s%s' % (func.__name__,
+						  callargs_str(), e.__class__.__name__, str(e),
+						  timing_str))
 				raise
 			if match(onreturn, retval):
 				if entr_done:
-					output('exit %s = %s' % (func.__name__,
-					  xfrm(None, retval)))
+					output('exit %s = %s%s' % (func.__name__,
+					  xfrm(None, retval), timing_str))
 				else:
-					output('call %s(%s) = %s' % (func.__name__, callargs_str(),
-					  xfrm(None, retval)))
+					output('call %s(%s) = %s%s' % (func.__name__,
+					  callargs_str(), xfrm(None, retval), timing_str))
 			return retval
 		return trace__
 	return trace_
@@ -173,7 +186,7 @@ if __name__ == '__main__':
 	def abcd7(a, b=2, *args, **kwargs):
 		return 'inner'
 
-	@trace(out=log.info)
+	@trace(out=log.info, timing=True)
 	def abcd8(a, *args, **kwargs):
 		abcd7('hello world', b=3, kw0={'a': 'dict'},
 		  kw1=[0, 1, {'b': 'dict'}])
