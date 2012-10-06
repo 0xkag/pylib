@@ -155,7 +155,7 @@ if __name__ == '__main__':
 		pass
 
 	import logging
-	logging.basicConfig(format='%(asctime)-15s %(thread)-8s %(message)s')
+	logging.basicConfig(format='[%(asctime)-15s] [%(threadName)-8s] [%(message)s]')
 	log = logging.getLogger('tracing')
 	log.setLevel(logging.DEBUG)
 
