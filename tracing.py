@@ -85,11 +85,11 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 				arglist.append('%s=%s' % (name, xfrm(name, varkwargs)))
 
 			callargs = ', '.join(arglist)
-			entr_done=False
+			entr_done = False
 
 			if match(oncall, (args, kwargs)):
 				output('entr %s(%s)' % (func.__name__, callargs))
-				entr_done=True
+				entr_done = True
 			try:
 				retval = func(*args, **kwargs)
 			except Exception as e:
