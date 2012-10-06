@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: noet sw=4 ts=4:
 
-# Enter/exit tracing decorator for Python >= 2.7 (and >= 3.0?)
+# Enter/exit tracing decorator for Python >= 2.7 and >= 3.0
 #
 # Copyright (c) 2012 Kyle George <kgeorge@tcpsoft.com>
 #
@@ -16,6 +16,8 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+from __future__ import print_function
 
 from collections import Iterable, OrderedDict
 import functools
@@ -33,8 +35,8 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 	if not out:
 		def _out(*args):
 			for arg in args:
-				print arg,
-			print
+				print(arg, end=' ')
+			print()
 		output = _out
 	else:
 		output = out
@@ -65,7 +67,7 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 			args_data = [[x[0][0], x[0][1] if x[1] is None else x[1]] \
 			  for x in zip(args_defaults, args_position)]
 			args_data = OrderedDict(args_data)
-			for k, v in kwargs.iteritems():
+			for k, v in kwargs.items():
 				if k in args_data:
 					args_data[k] = v
 			varkwargs = {}
@@ -73,7 +75,7 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 				varkwargs[k] = kwargs[k]
 			varargs = args[len(argspec.args):]
 			arglist = ['%s=%s' % (k, xfrm(k, v)) for k, v in \
-			  args_data.iteritems()]
+			  args_data.items()]
 			if argspec.varargs:
 				name = '*%s' % argspec.varargs
 				arglist.append('%s=%s' % (name, xfrm(name, varargs)))
@@ -89,10 +91,10 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 
 			def callargs_str():
 				try:
-					return callargs_str._output
+					return callargs_str._saved
 				except:
-					callargs_str._output = callargs_repr(args, kwargs)
-					return callargs_str._output
+					callargs_str._saved = callargs_repr(args, kwargs)
+					return callargs_str._saved
 
 			if match(oncall, (args, kwargs)):
 				output('entr %s(%s)' % (func.__name__, callargs_str()))
