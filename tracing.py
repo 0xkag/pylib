@@ -30,40 +30,40 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 	also be used to hook those same events.
 	"""
 
-	def _trace(func):
-		argspec = inspect.getargspec(func)
-
+	if not out:
+		def _out(*args):
+			for arg in args:
+				print arg,
+			print
+		output = _out
+	else:
 		output = out
 
-		if not out:
-			def _out(*args):
-				for arg in args:
-					print arg,
-				print
-			output = _out
+	def match(onX, val):
+		if not onX:
+			return False
+		if onX is True:
+			return True
+		if callable(onX):
+			return onX(val)
+		if isinstance(onX, Iterable):
+			return val in onX
+		return onX == val
 
-		def match(onX, val):
-			if not onX:
-				return False
-			if onX is True:
-				return True
-			if callable(onX):
-				return onX(val)
-			if isinstance(onX, Iterable):
-				return val in onX
-			return onX == val
+	def trace_(func):
+		argspec = inspect.getargspec(func)
 
-		@functools.wraps(func)
-		def __trace(*args, **kwargs):
-			defaults = [None] * len(argspec.args)
-			if argspec.defaults:
-				defaults = [None] * (len(argspec.args) - len(argspec.defaults))
-				defaults.extend(argspec.defaults)
-			args_data = [list(i) for i in zip(argspec.args, defaults)]
+		defaults = [None] * len(argspec.args)
+		if argspec.defaults:
+			defaults = [None] * (len(argspec.args) - len(argspec.defaults))
+			defaults.extend(argspec.defaults)
+		args_defaults = [list(i) for i in zip(argspec.args, defaults)]
+
+		def callargs_repr(*args, **kwargs):
 			args_position = [None] * (len(argspec.args) - len(args))
 			args_position = list(args[0:len(argspec.args)]) + args_position
 			args_data = [[x[0][0], x[0][1] if x[1] is None else x[1]] \
-			  for x in zip(args_data, args_position)]
+			  for x in zip(args_defaults, args_position)]
 			args_data = OrderedDict(args_data)
 			for k, v in kwargs.iteritems():
 				if k in args_data:
@@ -72,9 +72,6 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 			for k in (set(kwargs.keys()) - set(args_data.keys())):
 				varkwargs[k] = kwargs[k]
 			varargs = args[len(argspec.args):]
-
-			#callargs = inspect.getcallargs(func, *args, **kwargs)
-
 			arglist = ['%s=%s' % (k, xfrm(k, v)) for k, v in \
 			  args_data.iteritems()]
 			if argspec.varargs:
@@ -83,12 +80,22 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 			if argspec.keywords:
 				name = '**%s' % argspec.keywords
 				arglist.append('%s=%s' % (name, xfrm(name, varkwargs)))
+			result = ', '.join(arglist)
+			return result
 
-			callargs = ', '.join(arglist)
+		@functools.wraps(func)
+		def trace__(*args, **kwargs):
 			entr_done = False
 
+			def callargs_str():
+				try:
+					return callargs_str._output
+				except:
+					callargs_str._output = callargs_repr(args, kwargs)
+					return callargs_str._output
+
 			if match(oncall, (args, kwargs)):
-				output('entr %s(%s)' % (func.__name__, callargs))
+				output('entr %s(%s)' % (func.__name__, callargs_str()))
 				entr_done = True
 			try:
 				retval = func(*args, **kwargs)
@@ -99,18 +106,18 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, xfrm=_repr):
 						  e.__class__.__name__, str(e)))
 					else:
 						output('cexp %s(%s) raised %s %s' % (func.__name__,
-						  callargs, e.__class__.__name__, str(e)))
+						  callargs_str(), e.__class__.__name__, str(e)))
 				raise
 			if match(onreturn, retval):
 				if entr_done:
 					output('exit %s = %s' % (func.__name__,
 					  xfrm(None, retval)))
 				else:
-					output('call %s(%s) = %s' % (func.__name__, callargs,
+					output('call %s(%s) = %s' % (func.__name__, callargs_str(),
 					  xfrm(None, retval)))
 			return retval
-		return __trace
-	return _trace
+		return trace__
+	return trace_
 
 if __name__ == '__main__':
 	@trace()
