@@ -127,10 +127,10 @@ def trace(out=None, oncall=True, onexception=True, onreturn=True, timing=False,
 				raise
 			if match(onreturn, retval):
 				if entr_done:
-					output('exit %s = %s%s' % (func.__name__,
+					output('exit %s=%s%s' % (func.__name__,
 					  xfrm(None, retval), timing_str))
 				else:
-					output('call %s(%s) = %s%s' % (func.__name__,
+					output('call %s(%s)=%s%s' % (func.__name__,
 					  callargs_str(), xfrm(None, retval), timing_str))
 			return retval
 		return trace__
